@@ -23,10 +23,13 @@ Telegram-бот для автоматизации записи в барберш
 |---|---|
 | ![start](screenshots/01-start.png) | ![services](screenshots/02-services.png) |
 
+| Выбор мастера | Выбор дня |
+|---|---|
+| ![masters](screenshots/03-masters.png) | ![slots](screenshots/04-slots.png) |
+
 | Выбор времени | Подтверждение |
 |---|---|
-| ![slots](screenshots/03-slots.png) | ![confirmed](screenshots/04-confirmed.png) |
-
+| ![time](screenshots/05-time.png) | ![confirmed](screenshots/06-confirmed.png) |
 ---
 
 ## 🛠 Стек
