@@ -14,7 +14,7 @@ router = Router(name="users:start")
 async def start_handler(message: Message) -> None:
     name = message.from_user.first_name if message.from_user else "друг"
     await message.answer(
-        f"💈 <b>Барбершоп «Manstyle»</b>\n\n"
+        f"💈 <b>Барбершоп</b>\n\n"
         f"Привет, <b>{name}</b>!\n\n"
         "Здесь можно записаться к мастеру за пару кликов:\n"
         "• выбрать услугу\n"

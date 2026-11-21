@@ -9,17 +9,17 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # key -> (display name, duration in minutes)
 SERVICES: dict[str, tuple[str, int]] = {
-    "cut": ("Стрижка", 60),
+    "cut": ("Мужская стрижка", 60),
     "cut_beard": ("Стрижка + борода", 90),
+    "beard": ("Оформление бороды", 30),
     "gray": ("Камуфляж седины", 60),
 }
 
-# key -> display name
 MASTERS: dict[str, str] = {
-    "alex": "Александр",
-    "dmitry": "Дмитрий",
+    "ivan": "Иван",
+    "sergey": "Сергей",
+    "artem": "Артём",
 }
-
 # --- Keyboards --------------------------------------------------------------
 
 
