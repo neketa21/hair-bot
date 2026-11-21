@@ -8,6 +8,7 @@ import sys
 from aiogram.types import BotCommandScopeAllPrivateChats
 
 from handlers import setup_routers
+from database import init_db
 from loader import bot, dp
 from middlewares.logging import LoggingMiddleware
 from utils.notify_admins import on_shutdown, on_startup
@@ -20,6 +21,8 @@ async def main() -> None:
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
+    await init_db()
+    
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.set_my_commands(commands, scope=BotCommandScopeAllPrivateChats())
 

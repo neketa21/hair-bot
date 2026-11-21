@@ -6,4 +6,5 @@ from aiogram.types import BotCommand
 commands = [
     BotCommand(command="start", description="Start the bot"),
     BotCommand(command="help", description="Help"),
+    BotCommand(command="book", description="Записаться в барбершоп"),
 ]

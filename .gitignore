@@ -1,10 +1,52 @@
-__pycache__/
-*.pyc
+# --- Secrets (НИКОГДА не коммитить) ---
 .env
-.venv/
-venv/
-.pytest_cache/
-.DS_Store
+.env.*
+!.env.example
 
-# Internal planning/spec docs (kept locally, not part of the public template)
-docs/superpowers/
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Virtual environment ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- Database (локальная, у каждого своя) ---
+*.db
+*.sqlite
+*.sqlite3
+barber.db
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Pytest / coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# --- IDE / editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Railway / misc ---
+.railway/

@@ -12,13 +12,14 @@ router = Router(name="users:start")
 
 @router.message(CommandStart())
 async def start_handler(message: Message) -> None:
-    name = message.from_user.full_name if message.from_user else "friend"
+    name = message.from_user.first_name if message.from_user else "друг"
     await message.answer(
-        f'<tg-emoji emoji-id="5453969572354878595">⭐</tg-emoji> Hello, <b>{name}</b>! 👋\n'
-        "I'm an aiogram 3 starter template bot.\n\n"
-        "<b>Icon custom emoji test</b>\n\n"
-        "Left button: <code>icon_custom_emoji_id</code> set\n"
-        "Right button: no icon\n\n"
-        "If you have Telegram Premium (as bot owner), the left button shows a star icon.",
+        f"💈 <b>Барбершоп «Manstyle»</b>\n\n"
+        f"Привет, <b>{name}</b>!\n\n"
+        "Здесь можно записаться к мастеру за пару кликов:\n"
+        "• выбрать услугу\n"
+        "• выбрать мастера\n"
+        "• выбрать удобный день и время\n\n"
+        "Нажмите кнопку ниже, чтобы начать запись 👇",
         reply_markup=get_start_keyboard(),
     )
