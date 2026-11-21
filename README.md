@@ -1,177 +1,134 @@
-# Aiogram 3 Bot Template
+# 💈 Barber Shop Booking Bot
 
-> A modern, production-ready **[aiogram 3](https://github.com/aiogram/aiogram)** Telegram bot starter template for Python — routers, type hints, `pydantic-settings`, Memory↔Redis FSM, Docker, tests, and CI. Just `git clone` and start building.
+Telegram-бот для автоматизации записи в барбершоп. Клиент выбирает услугу, мастера, день и свободный слот, оставляет телефон — администратор получает уведомление о новой записи в Telegram. Ручная запись в переписке и двойные брони исключены.
 
-[![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
-[![aiogram](https://img.shields.io/badge/aiogram-3.28-blue.svg)](https://github.com/aiogram/aiogram)
-[![CI](https://github.com/ulugby/aiogram3-bot-template/actions/workflows/ci.yml/badge.svg)](https://github.com/ulugby/aiogram3-bot-template/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Code style: type hints](https://img.shields.io/badge/typed-100%25-brightgreen.svg)](https://docs.python.org/3/library/typing.html)
-
-A clean foundation for any Telegram bot. No database, no boilerplate to delete — just the patterns you actually reuse on every project, kept up to date with the latest aiogram release.
+**Живое демо:** [@ManHairStyle_bot](https://t.me/ManHairStyle_bot) — попробуйте записаться, это займёт 30 секунд.
 
 ---
 
-## ✨ Features
+## ✨ Возможности
 
-- **aiogram 3.28+** — uses the modern `DefaultBotProperties` API (the new `parse_mode`)
-- **Router-based** architecture — every module is an independent `Router`
-- **pydantic-settings** — type-safe configuration loaded from `.env`
-- **FSM storage** — Memory by default, switch to **Redis** with a single `.env` flag
-- **⭐ Telegram Premium icons** — ready-to-use examples for custom emoji on **buttons and inside messages** ([see below](#-telegram-premium-icons))
-- **Inline & reply keyboards** — working `/start` (inline) and `/help` (reply) examples
-- **Docker + docker-compose** — bot + Redis, one command to run
-- **pytest** test suite + **GitHub Actions CI**
-- Logging middleware, global error handler, admin notifications, bot command menu
-- **100% type-hinted**, formatted, and English throughout
+- 💈 **Пошаговая запись** через FSM: услуга → мастер → день → слот → телефон → подтверждение
+- ⏰ **Свободные слоты считаются «на лету»** с учётом длительности услуги и графика мастера — не хранятся отдельно, поэтому не «дрейфуют» относительно реальных записей
+- 🔒 **Защита от двойных броней** через атомарную транзакцию SQLite (`BEGIN IMMEDIATE`) с повторной проверкой интервала — два клиента не займут одно время даже при одновременном нажатии
+- 🔔 **Уведомление администратору** о каждой новой записи
+- ↩️ Кнопки «Назад» и «Отмена» на каждом шаге
+- 🧠 **FSM-состояния** — бот не путается, если клиент пишет что-то не по делу
 
-## 📑 Table of Contents
+---
 
-- [Quick Start](#-quick-start)
-- [Docker](#-docker)
-- [Telegram Premium Icons](#-telegram-premium-icons)
-- [Configuration](#️-configuration)
-- [Project Structure](#-project-structure)
-- [Keyboards](#-keyboards)
-- [Adding a New Handler](#-adding-a-new-handler)
-- [Testing](#-testing)
-- [Contributing & Contact](#-contributing--contact)
-- [License](#-license)
+## 🖼 Скриншоты
 
-## 🚀 Quick Start
+| Приветствие | Выбор услуги |
+|---|---|
+| ![start](screenshots/01-start.png) | ![services](screenshots/02-services.png) |
+
+| Выбор времени | Подтверждение |
+|---|---|
+| ![slots](screenshots/03-slots.png) | ![confirmed](screenshots/04-confirmed.png) |
+
+---
+
+## 🛠 Стек
+
+- **Python 3.13**
+- **aiogram 3** — современный асинхронный фреймворк для Telegram-ботов
+- **SQLite + aiosqlite** — лёгкая БД, не требующая отдельного сервера
+- **pydantic-settings** — типизированная конфигурация из `.env`
+- **FSM** (Finite State Machine) — управление состояниями диалога
+
+---
+
+## 🏗 Как устроена защита от двойных броней
+
+Классическая ошибка — хранить «свободные слоты» отдельно от броней. Тогда при удалении или изменении брони слот может «потеряться» или «заняться дважды».
+
+Здесь подход другой:
+
+1. **Свободные слоты не хранятся.** Функция `get_free_slots(master, day, duration)` генерирует все возможные слоты по графику и вычитает из них реальные активные брони мастера на этот день.
+2. **Запись создаётся атомарно.** В момент подтверждения `create_booking()` открывает транзакцию `BEGIN IMMEDIATE`, **заново проверяет**, что интервал не пересекается ни с одной активной бронью, и только тогда делает `INSERT`. Если слот заняли между показом клавиатуры и нажатием «Подтвердить» — клиент получает сообщение «слот только что заняли» и обновлённую клавиатуру.
+
+Это устраняет целый класс багов «двое записались на одно время».
+
+```python
+# database/db.py — упрощённо
+async with aiosqlite.connect(DB_PATH) as db:
+    await db.execute("BEGIN IMMEDIATE")
+    async with db.execute(
+        "SELECT 1 FROM bookings "
+        "WHERE master = ? AND status = 'active' "
+        "  AND start_time < ? AND end_time > ?",
+        (master, end_s, start_s),
+    ) as cursor:
+        if await cursor.fetchone() is not None:
+            await db.rollback()
+            return False  # слот занят
+    await db.execute("INSERT INTO bookings (...) VALUES (...)", (...))
+    await db.commit()
+    return True
+```
+
+---
+
+## 🚀 Локальный запуск
 
 ```bash
-git clone https://github.com/ulugby/aiogram3-bot-template.git
-cd aiogram3-bot-template
+# 1. Клонировать
+git clone https://github.com/nekata21/hair-bot.git
+cd hair-bot
 
-python3 -m venv .venv && source .venv/bin/activate
+# 2. Виртуальное окружение
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate      # macOS / Linux
+
+# 3. Зависимости
 pip install -r requirements.txt
 
-cp .env.example .env        # then put your BOT_TOKEN inside
+# 4. Настроить токен
+copy .env.example .env          # Windows
+# cp .env.example .env          # macOS / Linux
+# вписать BOT_TOKEN и ADMINS в .env
+
+# 5. Запустить
 python app.py
 ```
 
-Get your `BOT_TOKEN` from [@BotFather](https://t.me/BotFather). That's it — send `/start` to your bot.
+---
 
-## 🐳 Docker
+## ⚙️ Конфигурация
 
-```bash
-cp .env.example .env        # set BOT_TOKEN, and USE_REDIS=true if you want Redis
-docker compose up --build
-```
+Все настройки — в `.env` (см. `.env.example`):
 
-This starts the bot together with a Redis container for FSM storage.
+| Переменная | Обязательна | Описание |
+|---|---|---|
+| `BOT_TOKEN` | ✅ | Токен из [@BotFather](https://t.me/BotFather) |
+| `ADMINS` | ✅ | Telegram ID администраторов через запятую (`820449744,123456789`) |
+| `USE_REDIS` | ❌ | `false` по умолчанию (MemoryStorage). `true` — если есть Redis |
+| `REDIS_HOST` / `REDIS_PORT` | ❌ | Только если `USE_REDIS=true` |
 
-## ⭐ Telegram Premium Icons
+**Настройки барбершопа** (услуги, мастера, график) — в одном месте:
 
-Telegram lets you show **custom emoji icons** in two places — on inline buttons and inside message text. This template ships working examples of both.
+- `keyboards/inline/booking.py` → словари `SERVICES` и `MASTERS`
+- `database/db.py` → `WORKDAY_START_HOUR`, `WORKDAY_END_HOUR`, `SLOT_STEP_MINUTES`
 
-> [!IMPORTANT]
-> Custom emoji icons are only rendered when the **bot owner's account has Telegram Premium**. Without Premium they are silently ignored — the button/message still works, just without the icon. No error is raised, so it's safe to ship either way.
+---
 
-### 1. Icon on an inline button — `icon_custom_emoji_id`
+## ☁️ Деплой
 
-From [`keyboards/inline/start_kb.py`](keyboards/inline/start_kb.py):
-
-```python
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
-# Custom emoji ID shown as a button icon (requires bot owner Telegram Premium).
-ICON_STAR = "5453969572354878595"
-
-InlineKeyboardButton(
-    text="Premium user (icon enabled)",
-    callback_data="demo_premium",
-    icon_custom_emoji_id=ICON_STAR,   # set to None to render a plain button
-)
-```
-
-### 2. Icon inside a message — `<tg-emoji>`
-
-Because the bot uses `ParseMode.HTML`, you can drop a custom emoji straight into any text with the `<tg-emoji>` tag (see [`handlers/users/start.py`](handlers/users/start.py)):
-
-```python
-await message.answer(
-    '<tg-emoji emoji-id="5453969572354878595">⭐</tg-emoji> Hello, <b>World</b>!'
-)
-```
-
-The `⭐` between the tags is the **fallback** shown to non-Premium viewers; Premium users see the custom emoji.
-
-### How do I find an emoji ID?
-
-Send the premium/custom emoji to a helper bot such as [@idstickerbot](https://t.me/idstickerbot), or read the `custom_emoji` entity's `custom_emoji_id` from an incoming message. Replace `ICON_STAR` with your own ID.
-
-## ⚙️ Configuration
-
-All configuration lives in `.env` (copy it from `.env.example`):
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `BOT_TOKEN` | Token from [@BotFather](https://t.me/BotFather) | — (required) |
-| `ADMINS` | Admin Telegram IDs, comma-separated | `[]` |
-| `USE_REDIS` | Use Redis for FSM storage | `false` |
-| `REDIS_HOST` / `REDIS_PORT` | Redis address | `localhost` / `6379` |
-
-## 📁 Project Structure
+Бот развёрнут на **Railway** (бесплатный тариф). Файл `Procfile` говорит Railway запускать его как фоновый worker:
 
 ```
-├── app.py            # entry point — assembles routers and starts polling
-├── loader.py         # Bot + Dispatcher + storage factory (Memory ↔ Redis)
-├── data/config.py    # type-safe Settings (pydantic-settings)
-├── handlers/         # users (start/help/callbacks/echo), groups, channels, errors
-├── keyboards/        # inline (premium icons) and default (reply) keyboards
-├── middlewares/      # logging middleware
-├── states/  utils/   # FSM states, notify_admins, set_botcommands
-└── tests/            # pytest test suite
+worker: python app.py
 ```
 
-## ⌨️ Keyboards
+Переменные `BOT_TOKEN` и `ADMINS` задаются в панели Railway → Variables. При каждом `git push` в `main` Railway автоматически пересобирает и перезапускает бота.
 
-### Inline keyboard (with premium icons)
+---
 
-`/start` shows an inline keyboard built in [`keyboards/inline/start_kb.py`](keyboards/inline/start_kb.py). It demonstrates the premium icon feature with two buttons side by side: one with `icon_custom_emoji_id` set, one without. The button taps are answered in [`handlers/users/callbacks.py`](handlers/users/callbacks.py).
+## 📬 Контакты
 
-### Reply keyboard
+- Telegram: [@ManHairStyle_bot](https://t.me/ManHairStyle_bot) (демо)
+- GitHub: [@neketa21](https://github.com/neketa21)
 
-`/help` shows a reply keyboard from [`keyboards/default/help_kb.py`](keyboards/default/help_kb.py) — the classic always-visible button menu under the input field.
-
-## ➕ Adding a New Handler
-
-1. Create a new file in `handlers/users/`, defining a `router = Router()`.
-2. Write your handler with `@router.message(...)` (or `@router.callback_query(...)`).
-3. Register it in `handlers/__init__.py` inside `setup_routers()` — **before** `echo`
-   (the echo handler catches all remaining text, so anything after it never runs).
-
-```python
-# handlers/users/ping.py
-from aiogram import Router
-from aiogram.filters import Command
-from aiogram.types import Message
-
-router = Router(name="users:ping")
-
-
-@router.message(Command("ping"))
-async def ping_handler(message: Message) -> None:
-    await message.answer("pong")
-```
-
-## 🧪 Testing
-
-```bash
-pip install -r requirements-dev.txt
-pytest
-```
-
-The suite mocks Telegram objects, so tests run instantly with no bot token required. CI runs them on every push and pull request.
-
-## 🤝 Contributing & Contact
-
-Issues and pull requests are welcome! If this template helped you, a ⭐ on the repo means a lot.
-
-Need help or have a question? Reach out on Telegram: [@ulugby](https://t.me/ulugby)
-
-## 📄 License
-
-Released under the [MIT License](LICENSE) — free for personal and commercial use. Do whatever you want with it; attribution is appreciated but not required.
+Если нужен такой бот под ваш барбершоп или салон — напишите в Telegram.
