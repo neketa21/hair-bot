@@ -131,7 +131,9 @@ worker: python app.py
 
 ## 📬 Контакты
 
-- Telegram: [@ManHairStyle_bot](https://t.me/ManHairStyle_bot) (демо)
+- Telegram: [@neketa21](https://t.me/neketa21)
 - GitHub: [@neketa21](https://github.com/neketa21)
+
+Демо вариант вашего бота: [@ManHairStyle_bot](https://t.me/ManHairStyle_bot)
 
 Если нужен такой бот под ваш барбершоп или салон — напишите в Telegram.
