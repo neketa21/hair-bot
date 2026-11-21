@@ -131,7 +131,7 @@ worker: python app.py
 
 ## 📬 Контакты
 
-- Telegram: [@neketa21](https://t.me/neketa21)
+- Telegram: [@YourBotManager](https://t.me/YourBotManager)
 - GitHub: [@neketa21](https://github.com/neketa21)
 
 Демо вариант вашего бота: [@ManHairStyle_bot](https://t.me/ManHairStyle_bot)
